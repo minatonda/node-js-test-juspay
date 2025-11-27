@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm'
 import { ConfigModule } from '@nestjs/config'
 import { DataSource } from 'typeorm'
 import { NotesModule } from './notes/notes.module'
+import { BullModule } from '@nestjs/bullmq'
 
 @Module({
   imports: [
@@ -17,10 +18,15 @@ import { NotesModule } from './notes/notes.module'
       synchronize: process.env.NODE_ENV !== 'production',
       migrationsRun: false, // Will run manually in main.ts if synchronize is false
     }),
+    BullModule.forRoot({
+      connection: {
+        host: 'localhost',
+        port: 6379,
+      },
+    }),
     NotesModule,
   ],
 })
 export class AppModule {
   constructor(private dataSource: DataSource) {}
 }
-

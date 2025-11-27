@@ -25,6 +25,9 @@ cp .env.example .env
 # Edit .env with your settings
 ```
 
+## REDDIS Settings on Docker
+docker run -d --name redis-dev -p 6379:6379 redis:7.4-alpine
+
 ## 🗄️ Database Configuration
 
 The project uses **in-memory SQLite** (`:memory:`), which means:
