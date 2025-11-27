@@ -25,6 +25,7 @@ import { ListNotesQueryDto } from "./dto/list-notes-query.dto";
 import { ListNotesResponseDto } from "./dto/list-notes-response.dto";
 import { NoteEntity } from "./note.entity";
 import { createUuidValidationPipe } from "../common/pipes/uuid-validation.pipe";
+import { UpdateNotificationScheduleDto } from "./dto/update-notification-schedule.dto";
 
 @ApiTags("Notes")
 @Controller("notes")
@@ -68,6 +69,31 @@ export class NotesController {
     @Param("id", createUuidValidationPipe("Note")) id: string
   ): Promise<NoteEntity> {
     return this.notesService.findOne(id);
+  }
+
+  @Patch(":id/notification-schedule")
+  @ApiOperation({ summary: "Reschedule a note notification" })
+  @ApiParam({ name: "id", description: "Note UUID", type: String })
+  @ApiResponse({
+    status: 200,
+    description: "Notification schedule updated successfully",
+  })
+  @ApiResponse({ status: 404, description: "Note not found" })
+  @ApiResponse({ status: 400, description: "Invalid data" })
+  async updateNotificationSchedule(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @Body() dto: UpdateNotificationScheduleDto
+  ) {
+    const jobId = await this.notesService.rescheduleNotification(
+      id,
+      dto.schedule
+    );
+
+    return {
+      message: "Notification schedule updated",
+      jobId,
+      schedule: dto.schedule,
+    };
   }
 
   @Patch(":id")

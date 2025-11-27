@@ -25,6 +25,8 @@ import { NotificationsService } from "./jobs/notifications.service";
 export class NotesService {
   private readonly logger = new Logger(NotesService.name);
 
+  private notificationsTriggered: Map<string, string> = new Map();
+
   constructor(
     @InjectRepository(NoteEntity)
     private readonly repository: Repository<NoteEntity>,
@@ -61,9 +63,33 @@ export class NotesService {
       );
     }
 
-    this.notificationsService.enqueueEmail(saved, misc.schedule);
+    const job = await this.notificationsService.enqueueEmail(
+      saved,
+      misc.schedule
+    );
+    this.notificationsTriggered.set(saved.id, job.id);
 
     return saved;
+  }
+
+  async rescheduleNotification(
+    noteId: string,
+    schedule: string
+  ): Promise<string> {
+    const note = await this.findOne(noteId);
+    const currentJobId = this.notificationsTriggered.get(noteId);
+
+    if (!currentJobId) {
+      throw new NotFoundException(
+        "No notification schedule associated with this note"
+      );
+    }
+
+    await this.notificationsService.cancel(currentJobId);
+    const job = await this.notificationsService.enqueueEmail(note, schedule);
+    this.notificationsTriggered.set(noteId, job.id);
+
+    return job.id;
   }
 
   async findAll(query: ListNotesQueryDto): Promise<ListNotesResponseDto> {
@@ -188,6 +214,12 @@ export class NotesService {
     this.logger.log(`Deleting note with id: ${id}`);
 
     const note = await this.findOne(id);
+
+    const jobId = this.notificationsTriggered.get(id);
+    if (jobId) {
+      await this.notificationsService.cancel(jobId);
+      this.notificationsTriggered.delete(id);
+    }
 
     // Soft delete
     performSoftDelete(note);
